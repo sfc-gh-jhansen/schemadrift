@@ -61,7 +61,7 @@ path = "src/schemadrift/__init__.py"
 packages = ["src/schemadrift"]
 
 [tool.hatch.build.targets.sdist]
-exclude = ["temp/", "scripts/", ".pytest_cache/"]
+exclude = ["temp/", "scripts/", ".pytest_cache/", "schemadrift.toml"]
 
 [tool.black]
 line-length = 100
