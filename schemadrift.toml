@@ -1,0 +1,38 @@
+# #############################################################################
+# Targets under management
+# #############################################################################
+
+# All schemas in DEMO_DB
+[[targets]]
+database = "DEMO_DB"
+object_types = ["SCHEMA"]
+
+# All objects in DEMO_DB.DEV_SCHEMA
+[[targets]]
+database = "DEMO_DB"
+schemas = ["DEV_SCHEMA"]
+
+
+# #############################################################################
+# Object renaming rules
+# #############################################################################
+
+# Map logical names to physical Snowflake names for this environment
+#[name_mapping.account]
+#DEMO_DB = "DEMO_DB_DEV"
+
+[name_mapping.schemas.DEMO_DB]
+DEV_SCHEMA = "DEV_SCHEMA_V2"
+
+
+# #############################################################################
+# Per object type settings
+# #############################################################################
+
+# Optional per-object-type settings (merged with built-in defaults)
+[object_types.DATABASE]
+exclude_names = ["SNOWFLAKE", "SNOWFLAKE_SAMPLE_DATA"]
+exclude_prefixes = ["USER$"]
+
+[object_types.SCHEMA]
+exclude_names = ["INFORMATION_SCHEMA", "PUBLIC"]

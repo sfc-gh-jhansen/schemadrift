@@ -1,0 +1,71 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "schemadrift"
+version = "0.1.0"
+description = "A tool for detecting and managing Snowflake schema drift"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+authors = [
+    { name = "Developer", email = "dev@example.com" }
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "pluggy>=1.3.0",
+    "typer>=0.9.0",
+    "snowflake-connector-python>=3.0.0",
+    "pyyaml>=6.0",
+    "pydantic>=2.0.0",
+    "tomli>=2.0; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+schemadrift = "schemadrift.cli.main:app"
+
+[project.entry-points.schemadrift]
+# Built-in plugins are registered here for external discovery
+database = "schemadrift.plugins.builtin.database"
+schema = "schemadrift.plugins.builtin.schema"
+view = "schemadrift.plugins.builtin.view"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/schemadrift"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "src/schemadrift/plugins/builtin"]
+python_files = ["test_*.py", "tests.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
