@@ -76,7 +76,7 @@ class DriftService:
         ```
     """
 
-    DEPENDENCY_ORDER: list[str] = ["DATABASE", "SCHEMA", "VIEW"]
+    DEPENDENCY_ORDER: list[str] = ["ROLE", "DATABASE", "SCHEMA", "TABLE", "VIEW"]
 
     def __init__(
         self,

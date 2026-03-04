@@ -51,7 +51,9 @@ schemadrift = "schemadrift.cli.main:app"
 [project.entry-points.schemadrift]
 # Built-in plugins are registered here for external discovery
 database = "schemadrift.plugins.builtin.database"
+role = "schemadrift.plugins.builtin.role"
 schema = "schemadrift.plugins.builtin.schema"
+table = "schemadrift.plugins.builtin.table"
 view = "schemadrift.plugins.builtin.view"
 
 [tool.hatch.version]

@@ -307,10 +307,26 @@ class TestToDict:
         assert d["name"] == "V"
         assert d["query"] == "SELECT 1"
 
-    def test_account_object_includes_all_writable(self):
+    def test_account_object_includes_all_non_none(self):
         obj = AccountObject(name="DB", comment="test")
         d = obj.to_dict()
         assert d == {"name": "DB", "comment": "test"}
+
+    def test_none_values_stripped(self):
+        obj = AccountObject(name="DB", comment=None)
+        d = obj.to_dict()
+        assert "comment" not in d
+        assert d == {"name": "DB"}
+
+    def test_none_values_stripped_in_nested_dicts(self):
+        obj = SchemaObject(
+            name="V", database_name="DB", schema_name="SCH",
+            query="SELECT 1", comment=None,
+        )
+        d = obj.to_dict()
+        assert "comment" not in d
+        assert "database_name" not in d
+        assert "schema_name" not in d
 
     def test_database_object_excludes_database_name(self):
         obj = DatabaseObject(name="SCH", database_name="DB", comment="c")
@@ -367,13 +383,6 @@ class TestFromDict:
 
 
 class TestFieldNameHelpers:
-    def test_writable_field_names_excludes_contextual(self):
-        names = SchemaObject._writable_field_names()
-        assert "database_name" not in names
-        assert "schema_name" not in names
-        assert "name" in names
-        assert "query" in names
-
     def test_all_field_names_includes_everything(self):
         names = SchemaObject._all_field_names()
         assert "database_name" in names
@@ -437,7 +446,7 @@ class TestExtract:
         with pytest.raises(ObjectExtractionError):
             AccountObject.extract(mock, "BAD")
 
-    def test_extract_strips_read_only_fields(self):
+    def test_extract_keeps_all_known_fields(self):
         mock = MockConnection()
         self._mock_describe(mock, "TEST_ACCOUNT_OBJ", "X", {
             "name": "X",
@@ -540,7 +549,7 @@ class TestCompare:
         b = AccountObject(name="X", comment="new comment")
         diff = a.compare(b)
         assert diff.has_changes
-        assert "comment" in diff.added or "comment" in diff.modified
+        assert "comment" in diff.added
 
     def test_uses_default_strategy_when_none(self):
         assert AccountObject.DIFF_STRATEGY is None

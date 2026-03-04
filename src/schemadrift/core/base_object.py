@@ -135,8 +135,8 @@ class SnowflakeObject(ABC):
         OBJECT_TYPE: The Snowflake object type identifier (e.g., 'DATABASE').
         SCOPE: The scope level where this object type exists.
         DIFF_STRATEGY: The diff strategy to use.  Defaults to DefaultDiffStrategy.
-        READ_ONLY_FIELDS: Fields returned by Snowflake but not user-settable.
-            Stripped during extraction and never written to YAML.
+        EXCLUDE_FIELDS: Per-plugin fields to exclude from serialized output,
+            merged with ``_DEFAULT_EXCLUDE_FIELDS`` at serialization time.
         CONTEXTUAL_FIELDS: Scope/identity fields inferred from the file path.
             Present on the in-memory object but excluded from YAML output.
 
@@ -150,10 +150,11 @@ class SnowflakeObject(ABC):
     SCOPE: ClassVar[ObjectScope] = ObjectScope.SCHEMA
     DIFF_STRATEGY: ClassVar[DiffStrategy | None] = None
 
-    READ_ONLY_FIELDS: ClassVar[frozenset[str]] = frozenset({
+    _DEFAULT_EXCLUDE_FIELDS: ClassVar[frozenset[str]] = frozenset({
         "created_on", "dropped_on", "owner", "owner_role_type",
         "is_default", "is_current", "origin", "options",
     })
+    EXCLUDE_FIELDS: ClassVar[frozenset[str]] = frozenset()
     CONTEXTUAL_FIELDS: ClassVar[frozenset[str]] = frozenset({
         "database_name", "schema_name",
     })
@@ -404,41 +405,42 @@ class SnowflakeObject(ABC):
     # ---- generic serialization ---------------------------------------------
 
     @classmethod
-    def _get_read_only_fields(cls) -> frozenset[str]:
-        """Return the read-only fields for this object type.
-
-        Looks up the generated metadata first; falls back to the class-level
-        ``READ_ONLY_FIELDS`` when the type isn't in the metadata.
-        """
-        from schemadrift.core.resource_metadata import get_read_only_fields
-
-        metadata_fields = get_read_only_fields(cls.OBJECT_TYPE)
-        if metadata_fields:
-            return metadata_fields
-        return cls.READ_ONLY_FIELDS
-
-    @classmethod
-    def _writable_field_names(cls) -> list[str]:
-        """Return the names of all writable dataclass fields (for serialization)."""
-        read_only = cls._get_read_only_fields()
-        return [
-            f.name
-            for f in dataclasses.fields(cls)
-            if f.name not in read_only and f.name not in cls.CONTEXTUAL_FIELDS
-        ]
-
-    @classmethod
     def _all_field_names(cls) -> set[str]:
         """Return the names of all dataclass fields."""
         return {f.name for f in dataclasses.fields(cls)}
 
-    def to_dict(self) -> dict[str, Any]:
-        """Export writable fields as a serializable dictionary.
+    @staticmethod
+    def _strip_none(obj: Any) -> Any:
+        """Recursively remove keys whose value is ``None``.
 
-        Excludes READ_ONLY_FIELDS and CONTEXTUAL_FIELDS so that YAML
-        output contains only user-managed attributes.
+        - Dicts: keys with ``None`` values are dropped.
+        - Lists: each element is processed recursively.
+        - All other types pass through unchanged.
         """
-        return {name: getattr(self, name) for name in self._writable_field_names()}
+        if isinstance(obj, dict):
+            return {
+                k: SnowflakeObject._strip_none(v)
+                for k, v in obj.items()
+                if v is not None
+            }
+        if isinstance(obj, list):
+            return [SnowflakeObject._strip_none(item) for item in obj]
+        return obj
+
+    def to_dict(self) -> dict[str, Any]:
+        """Export definition fields as a serializable dictionary.
+
+        Excludes ``CONTEXTUAL_FIELDS``, ``_DEFAULT_EXCLUDE_FIELDS``, and
+        per-plugin ``EXCLUDE_FIELDS``.  Keys whose value is ``None`` are
+        stripped so the YAML output contains only meaningful attributes.
+        """
+        exclude = self.CONTEXTUAL_FIELDS | self._DEFAULT_EXCLUDE_FIELDS | self.EXCLUDE_FIELDS
+        raw = {
+            f.name: getattr(self, f.name)
+            for f in dataclasses.fields(self)
+            if f.name not in exclude
+        }
+        return self._strip_none(raw)
 
     @classmethod
     def from_dict(
@@ -468,19 +470,13 @@ class SnowflakeObject(ABC):
     ) -> SnowflakeObject:
         """Extract an object definition from Snowflake.
 
-        Uses ``DESCRIBE AS RESOURCE``, strips read-only fields, and
-        constructs the dataclass from the remaining writable + contextual
-        fields.  Subclasses only need to override this when the resource
-        JSON requires special mapping.
+        Uses ``DESCRIBE AS RESOURCE`` and keeps every field that matches
+        a declared dataclass field.  Filtering of metadata fields happens
+        at serialization time (``to_dict()``), not here.
         """
         raw = cls._describe_as_resource(connection, identifier)
-
         known = cls._all_field_names()
-        read_only = cls._get_read_only_fields()
-        filtered = {
-            k: v for k, v in raw.items()
-            if k in known and (k not in read_only or k in cls.CONTEXTUAL_FIELDS)
-        }
+        filtered = {k: v for k, v in raw.items() if k in known}
         return cls(**filtered)
 
     @classmethod

@@ -2,6 +2,10 @@
 # Targets under management
 # #############################################################################
 
+# Account level objects
+[[targets]]
+object_types = ["ROLE"]
+
 # All schemas in DEMO_DB
 [[targets]]
 database = "DEMO_DB"
@@ -21,8 +25,8 @@ schemas = ["DEV_SCHEMA"]
 #[name_mapping.account]
 #DEMO_DB = "DEMO_DB_DEV"
 
-[name_mapping.schemas.DEMO_DB]
-DEV_SCHEMA = "DEV_SCHEMA_V2"
+#[name_mapping.schemas.DEMO_DB]
+#DEV_SCHEMA = "DEV_SCHEMA_V2"
 
 
 # #############################################################################

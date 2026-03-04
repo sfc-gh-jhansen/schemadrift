@@ -43,7 +43,7 @@ class TestViewModel:
             View.from_ddl("CREATE VIEW DB.SCH.V AS SELECT 1")
 
     def test_to_dict(self):
-        """Test dictionary export excludes contextual fields."""
+        """Test dictionary export excludes contextual fields and strips None."""
         view = View(
             name="TEST_VIEW",
             database_name="DB",
@@ -57,6 +57,8 @@ class TestViewModel:
         assert "object_type" not in data
         assert "database_name" not in data
         assert "schema_name" not in data
+        assert "comment" not in data  # None values stripped
+        assert "recursive" not in data  # None values stripped
 
     def test_from_dict(self):
         """Test loading from dictionary with context."""
@@ -161,8 +163,9 @@ class TestViewWithMockConnection:
     def test_extract(self):
         """Test extracting a view via DESCRIBE AS RESOURCE.
 
-        Snowflake returns the full DDL in the query field and read-only
-        ``datatype`` on each column.  ``extract()`` should strip both.
+        Snowflake returns the full DDL in the query field and
+        ``datatype`` on each column.  ``extract()`` strips the DDL
+        wrapper but keeps ``datatype`` since it's part of the definition.
         """
         mock = MockConnection(database="TESTDB", schema="PUBLIC")
         self._mock_describe_response(mock, "TESTDB.PUBLIC.SUMMARY", {
@@ -188,7 +191,8 @@ class TestViewWithMockConnection:
         assert view.query == "SELECT ID, NAME FROM CUSTOMERS"
         assert view.secure is False
         assert view.comment == "Customer summary"
-        assert all("datatype" not in col for col in view.columns)
+        assert all("datatype" in col for col in view.columns)
+        assert view.columns[0]["datatype"] == "NUMBER(38,0)"
 
     def test_extract_secure(self):
         """Test extracting a secure view."""

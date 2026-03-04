@@ -72,11 +72,13 @@ def _register_builtin_plugins(pm: pluggy.PluginManager) -> None:
         pm: The plugin manager to register with.
     """
     # Import here to avoid circular imports
-    from schemadrift.plugins.builtin import database, schema, view
+    from schemadrift.plugins.builtin import database, role, schema, table, view
 
     # Register each plugin's HookAdapter instance
     pm.register(database.plugin, name="builtin_database")
+    pm.register(role.plugin, name="builtin_role")
     pm.register(schema.plugin, name="builtin_schema")
+    pm.register(table.plugin, name="builtin_table")
     pm.register(view.plugin, name="builtin_view")
 
 

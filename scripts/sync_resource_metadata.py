@@ -43,10 +43,7 @@ SKIP_FILES = frozenset({
 })
 
 OUTPUT_PATH = (
-    Path(__file__).resolve().parent.parent
-    / "src"
-    / "schemadrift"
-    / "core"
+    Path(__file__).resolve().parent
     / "resource_metadata.py"
 )
 
